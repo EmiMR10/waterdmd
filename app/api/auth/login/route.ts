@@ -16,9 +16,9 @@ export async function POST(request: Request) {
     const sql = neon(process.env.DATABASE_URL!);
 
     const users = await sql`
-      SELECT id, name, email, password_hash
+      SELECT id, name, email, password_hash, role
       FROM users
-      WHERE email = ${email}
+      WHERE LOWER(email) = LOWER(${email})
       LIMIT 1
     `;
 
@@ -30,6 +30,13 @@ export async function POST(request: Request) {
     }
 
     const user = users[0];
+
+    if (!user.password_hash) {
+      return NextResponse.json(
+        { error: "Esta cuenta no tiene contraseña configurada" },
+        { status: 401 }
+      );
+    }
 
     const validPassword = await bcrypt.compare(
       password,
@@ -43,22 +50,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const sessionUser = {
+      id: Number(user.id),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
     const response = NextResponse.json({
       message: "Inicio de sesión correcto",
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
+      user: sessionUser,
     });
 
     response.cookies.set(
       "waterdmd_user",
-      JSON.stringify({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      }),
+      JSON.stringify(sessionUser),
       {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
@@ -71,8 +77,9 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: "Error al iniciar sesión" },
+      { error: "No fue posible iniciar sesión" },
       { status: 500 }
     );
   }

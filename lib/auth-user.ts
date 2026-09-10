@@ -1,13 +1,33 @@
 import "server-only";
 
-import { auth } from "@/auth";
-import { getOrCreateUser } from "@/lib/db";
+import { cookies } from "next/headers";
 
-export async function requireUser() {
-  const session = await auth();
-  const account = session?.user;
-  const email = account?.email;
-  if (!account || !email) throw new Error("UNAUTHORIZED");
-  const id = await getOrCreateUser(email, account.name, account.image);
-  return { id, email, name: account.name ?? "Viajero" };
+type SessionUser = {
+  id: number;
+  email: string;
+  name: string | null;
+  role: "guest" | "host";
+};
+
+export async function requireUser(): Promise<SessionUser> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("waterdmd_user");
+
+  if (!sessionCookie?.value) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  try {
+    const user = JSON.parse(
+      sessionCookie.value
+    ) as SessionUser;
+
+    if (!user.id || !user.email) {
+      throw new Error("UNAUTHORIZED");
+    }
+
+    return user;
+  } catch {
+    throw new Error("UNAUTHORIZED");
+  }
 }

@@ -4,11 +4,25 @@ import { neon } from "@neondatabase/serverless";
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, role } = await request.json();
 
-    if (!email || !password) {
+    if (!name || !email || !password || !role) {
       return NextResponse.json(
-        { error: "Correo y contraseña son obligatorios" },
+        { error: "Completa todos los campos" },
+        { status: 400 }
+      );
+    }
+
+    if (role !== "guest" && role !== "host") {
+      return NextResponse.json(
+        { error: "Tipo de cuenta inválido" },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "La contraseña debe tener al menos 6 caracteres" },
         { status: 400 }
       );
     }
@@ -16,7 +30,7 @@ export async function POST(request: Request) {
     const sql = neon(process.env.DATABASE_URL!);
 
     const existing = await sql`
-      SELECT id FROM users WHERE email = ${email}
+      SELECT id FROM users WHERE LOWER(email) = LOWER(${email})
     `;
 
     if (existing.length > 0) {
@@ -28,20 +42,21 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const result = await sql`
-      INSERT INTO users (name, email, password_hash)
-      VALUES (${name || null}, ${email}, ${passwordHash})
-      RETURNING id, name, email
+    const rows = await sql`
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES (${name}, ${email.toLowerCase()}, ${passwordHash}, ${role})
+      RETURNING id, name, email, role
     `;
 
     return NextResponse.json({
-      message: "Usuario creado correctamente",
-      user: result[0],
+      message: "Cuenta creada correctamente",
+      user: rows[0],
     });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: "Error al crear usuario" },
+      { error: "No fue posible crear la cuenta" },
       { status: 500 }
     );
   }
