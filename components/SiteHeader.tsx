@@ -10,7 +10,7 @@ export function SiteHeader({ detail = false }: { detail?: boolean }) {
     <header className={`site-header ${detail ? "site-header--detail" : ""}`}>
       <Brand />
       {!detail && <nav className="main-nav"><Link href="/#explorar">Explorar</Link><Link href="/#pistas">Pistas locales</Link><Link href="/#como-funciona">Cómo funciona</Link></nav>}
-      <div className="header-actions"><Link className="host-link" href="/mis-reservas">Mis reservas</Link><Link className="profile-button" aria-label="Abrir tu cuenta" href="/api/auth/signin"><Menu size={17} /><UserRound size={17} /></Link></div>
+      <div className="header-actions"><Link className="host-link" href="/anfitrion">Anfitrión</Link><Link className="host-link" href="/mis-reservas">Mis reservas</Link><Link className="profile-button" aria-label="Abrir tu cuenta" href="/login"><Menu size={17} /><UserRound size={17} /></Link></div>
     </header>
   );
 }
